@@ -297,6 +297,16 @@ def main():
     # Footer
     st.markdown("---")
     st.markdown("**Facebook Ads Copy Generator** - Created for Vigoshop.si | Built with ❤️ using Python & Streamlit")
+    st.markdown("""
+        Disclaimer / Note:
+
+        This is a prototype / template application built to demonstrate the workflow for generating Facebook ad copies.
+        The products used are sample data from Vigoshop.si and do not represent a live connection to the Vigoshop catalog.
+
+        The goal of this tool is to showcase how such an application could function — from taking product details, generating ad copy variations, and allowing TXT/CSV export — but it is not connected to real campaigns and is not yet production-ready.
+
+        Future versions could integrate with the actual Vigoshop product database, add AI-powered text generation, A/B testing support, and direct publishing to Facebook Ads.
+        """)
 
 if __name__ == "__main__":
     main()
