@@ -79,17 +79,9 @@ streamlit run ai_facebook_ads_app.py
 ## 📦 Project Structure
 
 ```
-📁 ai-facebook-ads-generator/
-├── 🤖 ai_facebook_ads_app.py      # Main AI-powered Streamlit app
-├── 💻 facebook_ads_cli.py         # Command line interface
+📁 Facebook_Ad_TextGenerator/
+├── 🤖 app.py      # Main AI-powered Streamlit app
 ├── 📋 requirements.txt            # Python dependencies
-├── 📊 examples/                   # Sample outputs
-│   ├── ai_generated_examples.md   # AI vs Template comparison
-│   └── vigoshop_products_output.txt
-├── 📖 docs/                       # Documentation
-│   ├── project_specification.md   # Technical specs
-│   ├── user_manual.md            # How-to guide
-│   └── qa_testing_report.md      # Testing documentation
 └── 📄 README.md                  # You are here!
 ```
 
