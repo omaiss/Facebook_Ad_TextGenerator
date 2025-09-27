@@ -2,16 +2,19 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import time
+import requests
+import json
+import os
 
 # Configure page
 st.set_page_config(
-    page_title="Facebook Ads Copy Generator - Vigoshop",
+    page_title="AI Facebook Ads Copy Generator - Vigoshop",
     page_icon="🎯",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-class FacebookAdsCopyGenerator:
+class AIFacebookAdsCopyGenerator:
     def __init__(self):
         self.sample_products = [
             {
@@ -61,6 +64,7 @@ class FacebookAdsCopyGenerator:
             }
         ]
         
+        # Template-based copy generation (fallback)
         self.copy_templates = {
             'Problem-Solution': self._problem_solution_template,
             'Social Proof': self._social_proof_template,
@@ -123,14 +127,172 @@ class FacebookAdsCopyGenerator:
             'hashtags': "#BestPrice #PremiumQuality #SmartShopping #ValueForMoney"
         }
 
-    def generate_copies(self, product):
+    def call_groq_api(self, prompt, api_key):
+        """Call Groq API for AI-powered copy generation"""
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        data = {
+            "model": "llama-3.3-70b-versatile",  # Fast and free model
+            "messages": [
+                {
+                    "role": "system", 
+                    "content": "You are an expert Facebook ads copywriter specializing in e-commerce. Create compelling, conversion-focused ad copy that drives engagement and sales. Keep headlines under 125 characters and use emojis strategically."
+                },
+                {"role": "user", "content": prompt}
+            ],
+            "max_tokens": 500,
+            "temperature": 0.7
+        }
+        
+        try:
+            response = requests.post(url, headers=headers, json=data, timeout=30)
+            if response.status_code == 200:
+                return response.json()['choices'][0]['message']['content']
+            else:
+                return None
+        except Exception as e:
+            st.error(f"AI API Error: {str(e)}")
+            return None
+
+    def generate_ai_copy(self, product, style, api_key):
+        """Generate AI-powered copy for a specific style"""
+        style_prompts = {
+            'Problem-Solution': f"""
+            Create a Facebook ad copy using the Problem-Solution approach for this product:
+            
+            Product: {product['name']}
+            Price: €{product['price']}
+            Category: {product['category']}
+            Description: {product.get('description', '')}
+            Key Features: {product.get('key_features', '')}
+            Target Audience: {product.get('target_audience', '')}
+            
+            Format your response as JSON:
+            {{
+                "headline": "Engaging headline under 125 characters",
+                "primary": "Compelling primary text that identifies a problem and presents the solution",
+                "cta": "Strong call-to-action",
+                "hashtags": "Relevant hashtags including #VigoshopDeals"
+            }}
+            """,
+            
+            'Social Proof': f"""
+            Create a Facebook ad copy using Social Proof approach for this product:
+            
+            Product: {product['name']}
+            Price: €{product['price']}
+            Category: {product['category']}
+            Description: {product.get('description', '')}
+            Key Features: {product.get('key_features', '')}
+            Target Audience: {product.get('target_audience', '')}
+            
+            Focus on customer testimonials, reviews, and popularity. Format as JSON:
+            {{
+                "headline": "Engaging headline under 125 characters",
+                "primary": "Primary text emphasizing customer satisfaction and popularity",
+                "cta": "Strong call-to-action",
+                "hashtags": "Relevant hashtags including #CustomerFavorite"
+            }}
+            """,
+            
+            'FOMO': f"""
+            Create a Facebook ad copy using FOMO (Fear of Missing Out) approach for this product:
+            
+            Product: {product['name']}
+            Price: €{product['price']}
+            Category: {product['category']}
+            Description: {product.get('description', '')}
+            Key Features: {product.get('key_features', '')}
+            Target Audience: {product.get('target_audience', '')}
+            
+            Create urgency and scarcity. Format as JSON:
+            {{
+                "headline": "Urgent headline under 125 characters",
+                "primary": "Primary text creating urgency and fear of missing out",
+                "cta": "Urgent call-to-action",
+                "hashtags": "Relevant hashtags including #LimitedOffer"
+            }}
+            """,
+            
+            'Value-Focused': f"""
+            Create a Facebook ad copy using Value-Focused approach for this product:
+            
+            Product: {product['name']}
+            Price: €{product['price']}
+            Category: {product['category']}
+            Description: {product.get('description', '')}
+            Key Features: {product.get('key_features', '')}
+            Target Audience: {product.get('target_audience', '')}
+            
+            Emphasize value, savings, and smart purchasing. Format as JSON:
+            {{
+                "headline": "Value-focused headline under 125 characters",
+                "primary": "Primary text emphasizing great value and smart shopping",
+                "cta": "Value-driven call-to-action",
+                "hashtags": "Relevant hashtags including #BestPrice"
+            }}
+            """
+        }
+        
+        prompt = style_prompts.get(style, style_prompts['Problem-Solution'])
+        ai_response = self.call_groq_api(prompt, api_key)
+        
+        if ai_response:
+            try:
+                # Try to parse JSON response
+                if '{' in ai_response and '}' in ai_response:
+                    json_start = ai_response.find('{')
+                    json_end = ai_response.rfind('}') + 1
+                    json_str = ai_response[json_start:json_end]
+                    copy_data = json.loads(json_str)
+                    copy_data['style'] = style
+                    copy_data['product'] = product['name']
+                    copy_data['ai_generated'] = True
+                    return copy_data
+                else:
+                    # If no JSON, create structured response from text
+                    lines = ai_response.split('\n')
+                    return {
+                        'headline': f"AI Generated: {product['name']} - Special Offer! 🔥",
+                        'primary': ai_response[:200] + "...",
+                        'cta': 'Buy Now!',
+                        'hashtags': f"#{product['category'].replace(' ', '').replace('&', '')} #AIGenerated #VigoshopDeals",
+                        'style': style,
+                        'product': product['name'],
+                        'ai_generated': True
+                    }
+            except json.JSONDecodeError:
+                # Fallback to template if JSON parsing fails
+                return self._fallback_to_template(product, style)
+        else:
+            return self._fallback_to_template(product, style)
+
+    def _fallback_to_template(self, product, style):
+        """Fallback to template-based generation if AI fails"""
+        template_func = self.copy_templates.get(style, self.copy_templates['Problem-Solution'])
+        copy_data = template_func(product)
+        copy_data['style'] = style
+        copy_data['product'] = product['name']
+        copy_data['ai_generated'] = False
+        return copy_data
+
+    def generate_copies(self, product, use_ai=False, api_key=None):
         """Generate all ad copy variations for a product"""
         copies = []
-        for style_name, template_func in self.copy_templates.items():
-            copy_data = template_func(product)
-            copy_data['style'] = style_name
-            copy_data['product'] = product['name']
+        styles = ['Problem-Solution', 'Social Proof', 'FOMO', 'Value-Focused']
+        
+        for style in styles:
+            if use_ai and api_key:
+                copy_data = self.generate_ai_copy(product, style, api_key)
+            else:
+                copy_data = self._fallback_to_template(product, style)
             copies.append(copy_data)
+        
         return copies
 
     def export_to_txt(self, copies):
@@ -139,7 +301,8 @@ class FacebookAdsCopyGenerator:
         export_text += "=" * 70 + "\n\n"
         
         for copy in copies:
-            export_text += f"Style: {copy['style']}\n"
+            ai_indicator = " (AI Generated)" if copy.get('ai_generated', False) else " (Template Based)"
+            export_text += f"Style: {copy['style']}{ai_indicator}\n"
             export_text += f"Product: {copy['product']}\n\n"
             export_text += f"Headline: {copy['headline']}\n\n"
             export_text += f"Primary Text: {copy['primary']}\n\n"
@@ -155,14 +318,36 @@ class FacebookAdsCopyGenerator:
         return df.to_csv(index=False)
 
 def main():
-    generator = FacebookAdsCopyGenerator()
+    generator = AIFacebookAdsCopyGenerator()
     
     # Header
-    st.title("🎯 Facebook Ads Copy Generator")
-    st.subheader("Create compelling Facebook ad copy for Vigoshop products")
+    st.title("🤖 AI-Powered Facebook Ads Copy Generator")
+    st.subheader("Create compelling Facebook ad copy for Vigoshop products using AI")
     
-    # Sidebar for product selection
+    # AI Configuration in sidebar
     with st.sidebar:
+        st.header("🔧 AI Configuration")
+        
+        use_ai = st.toggle("Enable AI Generation", value=False)
+        
+        if use_ai:
+            st.info("🚀 Using Groq AI (Free Llama3 model)")
+            api_key = st.text_input(
+                "Groq API Key", 
+                type="password", 
+                help="Get your free API key from https://console.groq.com/"
+            )
+            if api_key:
+                st.success("✅ API Key configured")
+            else:
+                st.warning("⚠️ Please enter your Groq API key to use AI generation")
+        else:
+            st.info("📝 Using template-based generation")
+            api_key = None
+        
+        st.markdown("---")
+        
+        # Product Selection
         st.header("Product Selection")
         
         # Product type selection
@@ -199,7 +384,16 @@ def main():
             selected_product = custom_product
         
         # Generate button
-        generate_button = st.button("🚀 Generate Ad Copies", type="primary", use_container_width=True)
+        can_generate = selected_product.get('name') and selected_product.get('price')
+        if use_ai:
+            can_generate = can_generate and api_key
+            
+        generate_button = st.button(
+            "🚀 Generate AI Ad Copies" if use_ai else "🚀 Generate Ad Copies", 
+            type="primary", 
+            use_container_width=True,
+            disabled=not can_generate
+        )
     
     # Main content area
     col1, col2 = st.columns([1, 2])
@@ -219,6 +413,13 @@ def main():
             st.info(f"**Category:** {selected_product['category']}")
             if selected_product.get('key_features'):
                 st.info(f"**Features:** {selected_product['key_features']}")
+            
+            # AI Status indicator
+            if use_ai and api_key:
+                st.success("🤖 AI Generation: Enabled")
+            else:
+                st.info("📝 Template Generation: Enabled")
+                
         else:
             if not check and selected_product.get("name"):
                 st.warning(error)
@@ -228,16 +429,25 @@ def main():
     with col2:
         st.header("📱 Generated Ad Copies")
         
-        if generate_button and selected_product.get('name') and selected_product.get('price') and check:
+        if generate_button and can_generate and check:
             # Show loading spinner
-            with st.spinner("Generating compelling ad copies..."):
-                time.sleep(1.5)  # Simulate processing time
-                copies = generator.generate_copies(selected_product)
+            loading_message = "🤖 AI is crafting compelling ad copies..." if use_ai else "🔄 Generating compelling ad copies..."
+            with st.spinner(loading_message):
+                time.sleep(2.0 if use_ai else 1.5)  # Longer wait for AI
+                copies = generator.generate_copies(selected_product, use_ai, api_key)
                 st.session_state.generated_copies = copies
+                st.session_state.generation_mode = "AI" if use_ai else "Template"
         
         # Display generated copies
         if 'generated_copies' in st.session_state:
             copies = st.session_state.generated_copies
+            generation_mode = st.session_state.get('generation_mode', 'Template')
+            
+            # Show generation method
+            if generation_mode == "AI":
+                st.success("🤖 Generated using AI (Llama3 via Groq)")
+            else:
+                st.info("📝 Generated using templates")
             
             # Export options
             col_export1, col_export2 = st.columns(2)
@@ -246,7 +456,7 @@ def main():
                 st.download_button(
                     label="📄 Download as TXT",
                     data=txt_export,
-                    file_name=f"facebook_ads_copy_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
+                    file_name=f"ai_facebook_ads_copy_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
                     mime="text/plain"
                 )
             
@@ -255,16 +465,26 @@ def main():
                 st.download_button(
                     label="📊 Download as CSV",
                     data=csv_export,
-                    file_name=f"facebook_ads_copy_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                    file_name=f"ai_facebook_ads_copy_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
                     mime="text/csv"
                 )
             
             # Display copies in tabs
-            tab_names = [copy['style'] for copy in copies]
+            tab_names = []
+            for copy in copies:
+                ai_indicator = " 🤖" if copy.get('ai_generated', False) else " 📝"
+                tab_names.append(f"{copy['style']}{ai_indicator}")
+            
             tabs = st.tabs(tab_names)
             
             for tab, copy in zip(tabs, copies):
                 with tab:
+                    # AI generation indicator
+                    if copy.get('ai_generated', False):
+                        st.success("🤖 AI Generated Copy")
+                    else:
+                        st.info("📝 Template Based Copy")
+                    
                     st.markdown(f"### {copy['style']} Style")
                     
                     # Headline
@@ -289,14 +509,28 @@ def main():
                         "Complete Ad Copy (click to select all):",
                         full_copy,
                         height=150,
-                        key=f"copy_{copy['style']}"
+                        key=f"copy_{copy['style']}_{copy.get('ai_generated', 'template')}"
                     )
+        
         elif generate_button:
-            st.error("Please fill in all required product details before generating copies.")
+            if use_ai and not api_key:
+                st.error("🔑 Please enter your Groq API key to use AI generation.")
+            else:
+                st.error("Please fill in all required product details before generating copies.")
 
     # Footer
     st.markdown("---")
-    st.markdown("**Facebook Ads Copy Generator** - Created for Vigoshop.si | Built with ❤️ using Python & Streamlit")
+    col_footer1, col_footer2 = st.columns(2)
+    
+    with col_footer1:
+        st.markdown("**AI Facebook Ads Copy Generator** - Created for Vigoshop.si")
+        st.markdown("Built with ❤️ using Python, Streamlit & Groq AI")
+    
+    with col_footer2:
+        st.markdown("**Free AI Integration:**")
+        st.markdown("• [Get Groq API Key](https://console.groq.com/) (Free)")
+        st.markdown("• Powered by Llama3-8B model")
+    
     st.warning("⚠️ Note: This is a prototype app using sample Vigoshop products. It is intended for demonstration purposes only.")
 
 if __name__ == "__main__":
