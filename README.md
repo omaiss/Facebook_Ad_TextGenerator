@@ -248,7 +248,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## ⭐ Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=yourusername/ai-facebook-ads-generator&type=Date)](https://star-history.com/#yourusername/ai-facebook-ads-generator&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=omaiss/Facebook_Ad_TextGenerator&type=Date)](https://star-history.com/#yourusername/ai-facebook-ads-generator&Date)
 
 ---
 
