@@ -149,20 +149,6 @@ Primary: Worried about break-ins while you're away? The DIGICAM wireless camera 
 
 ---
 
-## 🛠️ Advanced Usage
-
-### Command Line Interface
-```bash
-# List available products
-python facebook_ads_cli.py --list
-
-# Generate for specific product
-python facebook_ads_cli.py --product digicam --export json
-
-# Custom product with AI
-python facebook_ads_cli.py --custom --name "Smart Watch" --price "49.99" --category "Electronics" --export txt
-```
-
 ### API Integration
 ```python
 from ai_facebook_ads_app import AIFacebookAdsCopyGenerator
@@ -205,12 +191,11 @@ We welcome contributions! Here's how you can help:
 
 ### Development Setup
 ```bash
-git clone https://github.com/yourusername/ai-facebook-ads-generator.git
-cd ai-facebook-ads-generator
+git clone https://github.com/omaiss/Facebook_Ad_TextGenerator.git
+cd Facebook_Ad_TextGenerator
 pip install -r requirements.txt
-streamlit run ai_facebook_ads_app.py
+streamlit run app.py
 ```
-
 ---
 
 ## 📞 Support & Contact
