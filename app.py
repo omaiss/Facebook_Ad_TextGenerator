@@ -6,6 +6,7 @@ import requests
 import json
 import os
 
+
 # Configure page
 st.set_page_config(
     page_title="AI Facebook Ads Copy Generator - Vigoshop",
